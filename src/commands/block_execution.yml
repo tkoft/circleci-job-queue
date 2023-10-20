@@ -1,5 +1,5 @@
 description: >
-  This command is executed and blocks further execution until the necessary criteria is met.
+  This command blocks further execution until no earlier instances of this job are running
 
 parameters:
   debug:
@@ -28,7 +28,7 @@ parameters:
 
 steps:
   - run:
-      name: Block execution until workflow is at the front of the line
+      name: Block execution until job is at the front of the line
       environment:
         CONFIG_DEBUG_ENABLED: "<< parameters.debug >>"
         CONFIG_TIME: "<< parameters.time >>"

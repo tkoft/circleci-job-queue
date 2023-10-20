@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  workflow-queue: promiseofcake/workflow-queue@dev:<<pipeline.git.revision>>
+  job-queue: tkoft/job-queue@dev:<<pipeline.git.revision>>
   orb-tools: circleci/orb-tools@11.6
 
 filters: &filters
@@ -12,19 +12,19 @@ workflows:
     jobs:
       - orb-tools/pack:
           filters: *filters
-      - workflow-queue/queue:
+      - job-queue/queue:
           filters:
             tags:
               ignore: /.*/
           context: orb-publishing
           requires: [orb-tools/pack]
       - orb-tools/publish:
-          orb-name: promiseofcake/workflow-queue
+          orb-name: tkoft/job-queue
           vcs-type: << pipeline.project.type >>
           pub-type: production
           requires:
             - orb-tools/pack
-            - workflow-queue/queue
+            - job-queue/queue
           context: orb-publishing
           filters:
             branches:

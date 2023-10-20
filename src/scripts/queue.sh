@@ -3,6 +3,7 @@
 tmp="/tmp"
 pipeline_file="${tmp}/pipeline_status.json"
 workflows_file="${tmp}/workflow_status.json"
+jobs_file="${tmp}/job_status.json"
 
 # logger command for debugging
 debug() {
@@ -66,7 +67,28 @@ fetch_pipeline_workflows(){
         created_at=$(jq -r '.items[] | .created_at' "${pipeline_detail}")
         debug "Pipeline's workflow was created at: ${created_at}"
     done
-    jq -s '[.[].items[] | select((.status == "running") or (.status == "created"))]' ${tmp}/pipeline-*.json > ${workflows_file}
+    if [ "${CONFIG_INCLUDE_ON_HOLD}" = "1" ]; then
+        active_statuses="$(printf '%s' '["running","created","on_hold"]')"
+    else
+        active_statuses="$(printf '%s' '["running","created"]')"
+    fi
+    jq -s "[.[].items[] | select([.status] | inside(${active_statuses}))]" ${tmp}/pipeline-*.json > ${workflows_file}
+}
+
+# fetch all jobs for a given workflow
+fetch_workflow_jobs(){
+    for workflow in $(jq -r ".items[] | .id //empty" ${workflows_file} | uniq)
+    do
+        debug "Fetching job information for workflow: ${workflow}"
+        workflow_detail=${tmp}/workflow-${workflow}.json
+        fetch "https://circleci.com/api/v2/workflow/${workflow}/job" "${workflow_detail}"
+        created_at=$(jq -r ".items[] | select (.id == \"${workflow}\").created_at" "${pipeline_detail}")
+        debug "Workflow was created at: ${created_at}"
+        # augment job list with workflow created_at
+        jq --arg "$created_at" ".items[] |= . + {created_at: ${created_at}}" ${tmp}/workflow-"${workflow}".json
+    done
+    active_statuses="$(printf '%s' '["running","queued","on_hold","blocked"]')"
+    jq -s "[.[].items[] | select(.name == ${CIRCLE_JOB}) | select([.status] | inside(${active_statuses}))]" ${tmp}/workflow-*.json > "${jobs_file}"
 }
 
 # parse workflows to fetch parmeters about this current running workflow
@@ -81,17 +103,19 @@ update_comparables(){
 
     fetch_pipeline_workflows
 
+    fetch_workflow_jobs
+
     load_current_workflow_values
 
-    echo "This job will block until no previous workflows have *any* workflows running."
-    oldest_running_workflow_id=$(jq '. | sort_by(.created_at) | .[0].id' ${workflows_file})
-    oldest_commit_time=$(jq '. | sort_by(.created_at) | .[0].created_at' ${workflows_file})
-    if [ -z "${oldest_commit_time}" ] || [ -z "${oldest_running_workflow_id}" ]; then
+    echo "This job will block until no previous workflows have the same job running."
+    oldest_running_job_id=$(jq '. | sort_by(.created_at) | .[0].id' ${jobs_file})
+    oldest_commit_time=$(jq '. | sort_by(.created_at) | .[0].created_at' ${jobs_file})
+    if [ -z "${oldest_commit_time}" ] || [ -z "${oldest_running_job_id}" ]; then
         echo "ERROR: API Error - unable to load previous workflow timings. File a bug"
         exit 1
     fi
 
-    debug "Oldest workflow: ${oldest_running_workflow_id}"
+    debug "Oldest job: ${oldest_running_job_id}"
 }
 
 # will perform a cancel request for the workflow in question
@@ -112,7 +136,7 @@ fi
 
 load_variables
 max_time=${CONFIG_TIME}
-echo "This build will block until all previous builds complete."
+echo "This job will block until all previous instances of this job complete."
 echo "Max Queue Time: ${max_time} minutes."
 wait_time=0
 loop_time=11
@@ -122,8 +146,8 @@ max_time_seconds=$((max_time * 60))
 confidence=0
 while true; do
     update_comparables
-    echo "This Workflow Timestamp: ${my_commit_time}"
-    echo "Oldest Workflow Timestamp: ${oldest_commit_time}"
+    echo "This Job Timestamp: ${my_commit_time}"
+    echo "Oldest Job Timestamp: ${oldest_commit_time}"
     if [[ -n "${my_commit_time}" ]] && [[ "${oldest_commit_time}" > "${my_commit_time}" || "${oldest_commit_time}" = "${my_commit_time}" ]] ; then
     # API returns Y-M-D HH:MM (with 24 hour clock) so alphabetical string compare is accurate to timestamp compare as well
     # Workflow API does not include pending, so it is posisble we queried in between a workfow transition, and we;re NOT really front of line.
@@ -139,7 +163,7 @@ while true; do
     else
         # If we fail, reset confidence
         confidence=0
-        echo "This build (${CIRCLE_WORKFLOW_ID}) is queued, waiting for workflow (${oldest_running_workflow_id}) to complete."
+        echo "This build (${CIRCLE_WORKFLOW_ID}) is queued, waiting for job (${oldest_running_job_id}) to complete."
         echo "Total Queue time: ${wait_time} seconds."
     fi
 

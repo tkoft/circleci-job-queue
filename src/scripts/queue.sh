@@ -50,7 +50,7 @@ fetch(){
 # fetch all current pipelines for a given branch
 fetch_pipelines(){
     : "${CIRCLE_BRANCH:?"Required Env Variable not found!"}"
-    echo "Only blocking execution if running previous workflows on branch: ${CIRCLE_BRANCH}"
+    echo "Only blocking execution if running previous ${CIRCLE_JOB} jobs on branch: ${CIRCLE_BRANCH}"
     pipelines_api_url_template="https://circleci.com/api/v2/project/gh/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pipeline?branch=${CIRCLE_BRANCH}"
 
     debug "Fetching piplines: ${pipelines_api_url_template} > ${pipeline_file}"

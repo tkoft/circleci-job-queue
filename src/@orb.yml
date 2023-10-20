@@ -1,7 +1,7 @@
 version: 2.1
 
 description: >
-  Allows jobs to be queued to run sequentially. Unlike eddieqebb/queue, which only prevents
+  Allows jobs to be queued to run sequentially. Unlike eddiewebb/queue, which only prevents
   parallel execution but doesn't guarantee order. For blocking on entire workflows, try
   promiseofcake/workflow-queue.
 

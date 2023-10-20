@@ -1,0 +1,13 @@
+description: >
+  Add a self-contained job that blocks on earlier instances of itself
+usage:
+  version: 2.1
+  orbs:
+    job-queue: tkoft/job-queue@1
+  workflows:
+    example:
+      jobs:
+        - job-queue/queue:
+            name: job-queue
+            context: <context-key>
+            only-on-branch: main

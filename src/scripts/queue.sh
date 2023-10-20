@@ -67,28 +67,26 @@ fetch_pipeline_workflows(){
         created_at=$(jq -r '.items[] | .created_at' "${pipeline_detail}")
         debug "Pipeline's workflow was created at: ${created_at}"
     done
-    if [ "${CONFIG_INCLUDE_ON_HOLD}" = "1" ]; then
-        active_statuses="$(printf '%s' '["running","created","on_hold"]')"
-    else
-        active_statuses="$(printf '%s' '["running","created"]')"
-    fi
+    active_statuses="$(printf '%s' '["running","created","on_hold"]')"
     jq -s "[.[].items[] | select([.status] | inside(${active_statuses}))]" ${tmp}/pipeline-*.json > ${workflows_file}
 }
 
 # fetch all jobs for a given workflow
 fetch_workflow_jobs(){
-    for workflow in $(jq -r ".items[] | .id //empty" ${workflows_file} | uniq)
+    for workflow in $(jq -r ".[] | .id //empty" ${workflows_file} | uniq)
     do
         debug "Fetching job information for workflow: ${workflow}"
         workflow_detail=${tmp}/workflow-${workflow}.json
         fetch "https://circleci.com/api/v2/workflow/${workflow}/job" "${workflow_detail}"
-        created_at=$(jq -r ".items[] | select (.id == \"${workflow}\").created_at" "${pipeline_detail}")
+        created_at=$(jq -r ".[] | select (.id == \"${workflow}\").created_at" "${workflows_file}")
         debug "Workflow was created at: ${created_at}"
         # augment job list with workflow created_at
-        jq --arg "$created_at" ".items[] |= . + {created_at: ${created_at}}" ${tmp}/workflow-"${workflow}".json
+        cp "${workflow_detail}" "${workflow_detail}.tmp"
+        jq --arg created_at "${created_at}" ".items[] |= . + {created_at: \"$created_at\"}" "${workflow_detail}.tmp" > "${workflow_detail}"
+        
     done
     active_statuses="$(printf '%s' '["running","queued","on_hold","blocked"]')"
-    jq -s "[.[].items[] | select(.name == ${CIRCLE_JOB}) | select([.status] | inside(${active_statuses}))]" ${tmp}/workflow-*.json > "${jobs_file}"
+    jq -s "[.[].items[] | select(.name == \"${CIRCLE_JOB}\") | select([.status] | inside(${active_statuses}))]" ${tmp}/workflow-*.json > "${jobs_file}"
 }
 
 # parse workflows to fetch parmeters about this current running workflow
@@ -99,10 +97,10 @@ load_current_workflow_values(){
 
 # load all the data necessary to compare build executions
 update_comparables(){
+    rm -f "${tmp}"/pipeline-*.json
+    rm -f "${tmp}"/workflow-*.json
     fetch_pipelines
-
     fetch_pipeline_workflows
-
     fetch_workflow_jobs
 
     load_current_workflow_values

@@ -18,6 +18,8 @@ For example, for a workflow that looks like:
 
 Job 2 will only block on earlier instances of job 2, even scheduled ones that aren't actually running yet. Independently, job 4 will also do so for earlier instances of job 4. Here, if multiple pushes are maded to a branch in succession, we can have the latest changes deployed to staging environment automatically (guaranteeing that old changes aren't deployed over newer ones e.g. if their tests happened to run slower), and same for production, even after waiting for manual approvals that could come out of order. This is nice because latest changes can still go to staging, even if production is being blocked purposely on an earlier change. 
 
+Note that we do not paginate on the circleci endpoints, 
+
 ## Configuration Requirements
 
 In order to use this orb you will need to export a `CIRCLECI_API_TOKEN` secret added to a context of your choosing. It will authentcation against the CircleCI API to check on workflow status. (see: <https://circleci.com/docs/api/v2/index.html#section/Authentication>)

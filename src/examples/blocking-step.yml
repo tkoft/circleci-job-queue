@@ -1,0 +1,27 @@
+description: >
+  Add a step to a job that blocks the job until no earlier instances are running
+usage:
+  jobs:
+    build:
+      docker:
+        - image: circleci/node:10
+      steps:
+        - run: echo "This job can overlap"
+    deploy:
+      docker:
+        - image: circleci/node:10
+      steps:
+        - job-queue/block_execution:
+            only-on-branch: main
+            time: "10"
+        - run: echo "This job will run in order"
+  orbs:
+    queue: tkoft/job-queue@volatile
+  version: 2.1
+  workflows:
+    build_deploy:
+      jobs:
+        - build
+        - deploy:
+            requires:
+              - build

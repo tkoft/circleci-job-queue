@@ -3,11 +3,11 @@ version: 2.1
 description: >
   Allows jobs to be queued to run sequentially. Unlike eddieqebb/queue, which only prevents
   parallel execution but doesn't guarantee order. For blocking on entire workflows, try
-  promiseofcake/workflow-queue. 
+  promiseofcake/workflow-queue.
 
-  This is ideal for jobs that must run in the order they are created, e.g. deployments on 
+  This is ideal for jobs that must run in the order they are created, e.g. deployments on
   a linear source control history.
-  
+
   This orb requires the project to have a CircleCI PAT in order to query build states.
 display:
   home_url: "https://github.com/tkoft/circleci-job-queue"

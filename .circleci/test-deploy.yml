@@ -12,12 +12,15 @@ workflows:
     jobs:
       - orb-tools/pack:
           filters: *filters
+      - hold:
+          type: approval
+          requires: [orb-tools/pack]
       - job-queue/queue:
           filters:
             tags:
               ignore: /.*/
           context: orb-publishing
-          requires: [orb-tools/pack]
+          requires: [hold]
       - orb-tools/publish:
           orb-name: tkoft/job-queue
           vcs-type: << pipeline.project.type >>

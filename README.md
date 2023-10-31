@@ -11,14 +11,15 @@ Promiseofcake's fork migrated to use CircleCI's v2 API, which has much more comp
 This fork adds the original functionality to queue by job back in, but using the v2 API which lets us fetch jobs that are both running and scheduled to run in the future. The behavior differs from the original queue orb in that while the original only ensure that jobs do not run in parallel, here we can ensure jobs will queue in order of their creation, and thus run sequentially. This is probably more in line with how most people expect the queue orb to work. We can now block execution of a job/workflow at specific "gates" along a workflow, even doing so multiple times if needed, guaranteeing that all instances of that job run in order.
 
 For example, for a workflow that looks like:
+
 1. Test (wildy variable in runtime)
 2. *Block execution, wait for earlier staging deploys to finish* Deploy to staging environment
 3. Hold for manual approval
 4. *Block execution, wait for earlier prod deploys to finish* Deploy to production environment
 
-Job 2 will only block on earlier instances of job 2, even scheduled ones that aren't actually running yet. Independently, job 4 will also do so for earlier instances of job 4. Here, if multiple pushes are maded to a branch in succession, we can have the latest changes deployed to staging environment automatically (guaranteeing that old changes aren't deployed over newer ones e.g. if their tests happened to run slower), and same for production, even after waiting for manual approvals that could come out of order. This is nice because latest changes can still go to staging, even if production is being blocked purposely on an earlier change. 
+Job 2 will only block on earlier instances of job 2, even scheduled ones that aren't actually running yet. Independently, job 4 will also do so for earlier instances of job 4. Here, if multiple pushes are maded to a branch in succession, we can have the latest changes deployed to staging environment automatically (guaranteeing that old changes aren't deployed over newer ones e.g. if their tests happened to run slower), and same for production, even after waiting for manual approvals that could come out of order. This is nice because latest changes can still go to staging, even if production is being blocked purposely on an earlier change.
 
-Note that we do not paginate on the circleci endpoints, 
+Note that we do not paginate on the circleci endpoints, so jobs will only block on other jobs running in the last 20 pipelines or so.
 
 ## Configuration Requirements
 
@@ -43,11 +44,11 @@ We welcome [issues](https://github.com/tkoft/circleci-job-queue/issues) to and [
 2. Find the current version of the orb.
     - You can run `circleci orb info tkoft/job-queue | grep "Latest"` to see the current version.
 3. Create a [new Release](https://github.com/tkoft/circleci-job-queue/releases/new) on GitHub.
-    - Click "Choose a tag" and _create_ a new [semantically versioned](http://semver.org/) tag. (ex: v1.0.0)
+    - Click "Choose a tag" and *create* a new [semantically versioned](http://semver.org/) tag. (ex: v1.0.0)
       - We will have an opportunity to change this before we publish if needed after the next step.
-4. Click _"+ Auto-generate release notes"_.
+4. Click *"+ Auto-generate release notes"*.
     - This will create a summary of all of the merged pull requests since the previous release.
-    - If you have used _[Conventional Commit Messages](https://conventionalcommits.org/)_ it will be easy to determine what types of changes were made, allowing you to ensure the correct version tag is being published.
+    - If you have used *[Conventional Commit Messages](https://conventionalcommits.org/)* it will be easy to determine what types of changes were made, allowing you to ensure the correct version tag is being published.
 5. Now ensure the version tag selected is semantically accurate based on the changes included.
-6. Click _"Publish Release"_.
+6. Click *"Publish Release"*.
     - This will push a new tag and trigger your publishing pipeline on CircleCI.
